@@ -9,16 +9,12 @@ import {
   Menu,
   Transition,
 } from "@headlessui/react";
-import { MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import {
   Bars3Icon,
-  ChartPieIcon,
   ChevronRightIcon,
   ClipboardDocumentCheckIcon,
-  Cog6ToothIcon,
-  DocumentDuplicateIcon,
   HomeModernIcon,
-  XMarkIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
 import { HandCoins, ShoppingBag, StoreIcon } from "lucide-react";
 import Image from "next/image";
@@ -156,7 +152,7 @@ const SideBar: React.FC<navigationType> = ({ main }) => {
                   <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4">
                     <div className="flex h-16 shrink-0 items-center mt-4">
                       <Link
-                        href="/"
+                        href="/Dashboard"
                         className="relative rounded-full overflow-hidden "
                       >
                         <Image

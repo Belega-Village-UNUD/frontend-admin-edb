@@ -1,0 +1,92 @@
+name: Deploy
+
+on:
+  push:
+    branches: ["staging"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  COMMIT_SHA: ${{ github.sha }}
+  REPO: frontend-admin-edb
+  INSTANCE_NAME: becommerce-instance
+  ZONE: asia-southeast2-a
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth-build
+        uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA }}
+
+      - name: SSH to Compute Engine and Build
+        id: compute-ssh-build
+        uses: "google-github-actions/ssh-compute@v1"
+        with:
+          instance_name: ${{ env.INSTANCE_NAME }}
+          zone: ${{ env.ZONE }}
+          ssh_private_key: ${{ secrets.SERVICE_ACCOUNT_SECRET_SSH_KEY }}
+          user: ${{ secrets.CE_USER }}
+          command: |-
+            cd $(pwd)/${{ env.REPO }}
+            git checkout staging
+            git fetch --dry-run
+            git pull origin staging
+            bash ./shell/build.sh staging ${{ env.COMMIT_SHA }}
+
+      - name: Build Output
+        id: compute-ssh-build-output
+        run: |-
+          echo '${{ steps.compute-ssh-build.outputs.stdout }}'
+          echo '${{ steps.compute-ssh-build.outputs.stderr }}'
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth-deploy
+        uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA }}
+
+      - name: SSH to Compute Engine and Deploy
+        id: compute-ssh-deploy
+        uses: "google-github-actions/ssh-compute@v1"
+        with:
+          instance_name: ${{ env.INSTANCE_NAME }}
+          zone: ${{ env.ZONE }}
+          ssh_private_key: ${{ secrets.SERVICE_ACCOUNT_SECRET_SSH_KEY }}
+          user: ${{ secrets.CE_USER }}
+          command: |-
+            cd $(pwd)/${{ env.REPO }}
+            bash ./shell/deploy.sh staging ${{ env.COMMIT_SHA }}
+
+      - name: Deploy Output
+        id: compute-ssh-deploy-output
+        run: |-
+          echo '${{ steps.compute-ssh-deploy.outputs.stdout }}'
+          echo '${{ steps.compute-ssh-deploy.outputs.stderr }}'

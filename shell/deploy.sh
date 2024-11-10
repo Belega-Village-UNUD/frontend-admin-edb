@@ -14,20 +14,19 @@ fi
 docker service ls | grep "frontend_admin_app"
 
 if [ $? -ne 0 ]; then
-  docker service create --name frontend_admin_app --publish published=3000,target=3000 ghcr.io/belega-village-unud/frontend-admin-edb:$COMMIT_SHA
+  export COMMIT_SHA=$COMMIT_SHA $(cat .env | grep PORT) >  /dev/null 2>&1; docker stack deploy -c ./docker/service/docker-compose.yml frontend_admin
   if [ $? -ne 0 ]; then
-      echo "Error in deploying $BRANCH of Frontend Admin Belega Service"
+      echo "Error in deploying $BRANCH of Frontend Belega Service"
       exit 1
   fi
 else
-  docker service update --force --image ghcr.io/belega-village-unud/frontend-admin-edb:$COMMIT_SHA frontend_admin_app
+  docker service update --force --image registry.belegacommerce.shop/belega-village-unud/frontend-web-edb:$COMMIT_SHA frontend_admin_app
   if [ $? -ne 0 ]; then
       echo "Error in deploying $BRANCH of Frontend Admin Belega Service"
       exit 1
   fi
 fi
 
+echo "Successfully deploy the image for registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$COMMIT_SHA on service frontend_admin_app"
 
-echo "Successfully deploy the image for ghcr.io/belega-village-unud/frontend-admin-edb:$COMMIT_SHA on service frontend_admin_app"
-
-docker service ls | grep frontend_admin | awk '{print $2, $3, $4, $5}'
+docker service ls | grep frontend_admin_app | awk '{print $2, $3, $4, $5}'

@@ -1,0 +1,25 @@
+version: "3.4"
+services:
+  app:
+    image: registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:${COMMIT_SHA}
+    env_file:
+      - ../../.env
+    deploy:
+      mode: replicated
+      replicas: 2
+      placement:
+        constraints:
+          - node.role==manager
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "1.5G"
+    ports:
+      - target: ${PORT}
+        published: ${PUBLISH_PORT}
+    networks:
+      - belega-network
+
+networks:
+  belega-network:
+    external: true

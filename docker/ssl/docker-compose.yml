@@ -1,0 +1,25 @@
+version: "3.4"
+services:
+  nginx:
+    image: nginx:latest
+    secrets:
+      - fullchain.pem
+      - privkey.pem
+      - dhparam.pem
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - belega-network
+
+networks:
+  belega-network:
+    external: true
+
+secrets:
+  fullchain.pem:
+    external: true
+  privkey.pem:
+    external: true
+  dhparam.pem:
+    external: true

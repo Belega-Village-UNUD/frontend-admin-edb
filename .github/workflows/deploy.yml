@@ -3,17 +3,88 @@ name: Deploy
 on:
   push:
     branches: ["staging"]
+    paths:
+      - "src/**"
+      - ".github/workflows/**"
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   COMMIT_SHA: ${{ github.sha }}
   REPO: frontend-admin-edb
-  INSTANCE_NAME: becommerce-instance
+  INSTANCE_NAME: belega-instance
   ZONE: asia-southeast2-a
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth-setup
+        uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA }}
+
+      - name: SSH to Compute Engine and Setup Environment
+        id: compute-ssh-setup
+        uses: "google-github-actions/ssh-compute@v1"
+        env:
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+          FRONTEND_HOST: ${{ secrets.FRONTEND_HOST }}
+          FRONTEND_SERVICE: ${{ secrets.FRONTEND_SERVICE }}
+          MIDTRANS_API_URL: ${{ secrets.MIDTRANS_API_URL }}
+          MIDTRANS_SERVER_KEY: ${{ secrets.MIDTRANS_SERVER_KEY }}
+          NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: ${{ secrets.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_PROTOCOL: ${{ secrets.NEXT_PUBLIC_PROTOCOL }}
+          NEXT_PUBLIC_HOSTNAME: ${{ secrets.NEXT_PUBLIC_HOSTNAME }}
+          PORT: ${{ secrets.PORT }}
+          PUBLISH_PORT: ${{ secrets.PUBLISH_PORT }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        with:
+          instance_name: ${{ env.INSTANCE_NAME }}
+          zone: ${{ env.ZONE }}
+          ssh_private_key: ${{ secrets.SERVICE_ACCOUNT_SECRET_SSH_KEY }}
+          user: ${{ secrets.CE_USER }}
+          command: |-
+            cd $(pwd)/${{ env.REPO }}
+            git switch staging
+            git pull origin staging
+            tee .env <<EOF
+            NODE_ENV=${{ env.NODE_ENV }}
+            FRONTEND_HOST=${{ env.FRONTEND_HOST }}
+            FRONTEND_SERVICE=${{ env.FRONTEND_SERVICE }}
+            MIDTRANS_API_URL=${{ env.MIDTRANS_API_URL }}
+            MIDTRANS_SERVER_KEY=${{ env.MIDTRANS_SERVER_KEY }}
+            NEXT_PUBLIC_MIDTRANS_CLIENT_KEY=${{ env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY }}
+            NEXT_PUBLIC_API_URL=${{ env.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_PROTOCOL=${{ env.NEXT_PUBLIC_PROTOCOL }}
+            NEXT_PUBLIC_HOSTNAME=${{ env.NEXT_PUBLIC_HOSTNAME }}
+            PORT=${{ env.PORT }}
+            PUBLISH_PORT=${{ env.PUBLISH_PORT }}
+            EOF
+            echo "${env.REGISTRY_PASSWORD}" | docker login https://registry.belegacommerce.shop -u ${env.REGISTRY_USERNAME} --password-stdin  
+            bash ./shell/build.sh staging ${{ env.COMMIT_SHA }}
+
+      - name: Setup Output
+        id: compute-ssh-deploy-output
+        run: |-
+          echo '${{ steps.compute-ssh-deploy.outputs.stdout }}'
+          echo '${{ steps.compute-ssh-deploy.outputs.stderr }}'
+
   build:
+    needs: setup
     runs-on: ubuntu-latest
     environment: staging
     permissions:
@@ -84,6 +155,8 @@ jobs:
           command: |-
             cd $(pwd)/${{ env.REPO }}
             bash ./shell/deploy.sh staging ${{ env.COMMIT_SHA }}
+            bash ./shell/proxy.sh
+            rm .env
 
       - name: Deploy Output
         id: compute-ssh-deploy-output

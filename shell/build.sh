@@ -13,33 +13,33 @@ fi
 BRANCH=$1
 COMMIT_SHA=$2
 
-echo "Performing build for staging" $BRANCH;
+echo "Performing build for $BRANCH";
 
 if [ "$(git rev-parse --abbrev-ref HEAD)" != "$BRANCH" ]; then
     echo "this branch is not up to date"
-    git checkout $BRANCH;
-    git fetch --dry-run origin $BRANCH;
+    git checkout --force $BRANCH;
+    git fetch --dry-run;
 fi
 
-git pull origin $BRANCH;
+git pull origin --force $BRANCH;
 
 if [ $? -ne 0 ]; then
     echo "Error in pull and fetch $BRANCH of Frontend Admin Belega Service $?"
     exit 1
 fi
 
-set -x
+
 docker image prune -f;
 
-docker build . \
-    -t ghcr.io/belega-village-unud/frontend-admin-edb:$COMMIT_SHA \
-    -t ghcr.io/belega-village-unud/frontend-admin-edb:$BRANCH
-
 if [ $? -ne 0 ]; then
-    echo "Error in build $BRANCH for Frontend Admin Belega Service $?"
-    exit 1
+    echo "Error in pruning images $?"
 fi
 
-set +x
+docker build . --file docker/service/Dockerfile \
+  -t registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$COMMIT_SHA \
+  -t registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$BRANCH
 
-echo "Successfully build the image for ghcr.io/belega-village-unud/frontend-admin-edb:$COMMIT_SHA"
+docker push registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$COMMIT_SHA 
+docker push registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$BRANCH 
+
+echo "Successfully build the image for registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$COMMIT_SHA"

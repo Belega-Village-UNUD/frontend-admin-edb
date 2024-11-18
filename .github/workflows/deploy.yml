@@ -58,11 +58,11 @@ jobs:
           ssh_private_key: ${{ secrets.SERVICE_ACCOUNT_SECRET_SSH_KEY }}
           user: ${{ secrets.CE_USER }}
           command: |-
-            cd $(pwd)/${{ env.REPO }}
-            if [ $? -ne 0 ]; then
-               cd ~;
-               git clone https://github.com/Belega-Village-UNUD/${{ env.REPO }}.git;
-            fi
+            if [ -e "$(pwd)/${{ env.REPO }}" ]; then 
+               cd $(pwd)/${{ env.REPO }}
+            else 
+               git clone git@github.com:{{ env.REPO }}.git 
+            fi 
             cd $(pwd)/${{ env.REPO }}
             git switch staging
             git pull origin staging

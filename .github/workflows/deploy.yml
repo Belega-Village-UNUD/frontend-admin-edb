@@ -59,6 +59,11 @@ jobs:
           user: ${{ secrets.CE_USER }}
           command: |-
             cd $(pwd)/${{ env.REPO }}
+            if [ $? -ne 0 ]; then
+               cd ~;
+               git clone https://github.com/Belega-Village-UNUD/${{ env.REPO }}.git;
+            fi
+            cd $(pwd)/${{ env.REPO }}
             git switch staging
             git pull origin staging
             tee .env <<EOF

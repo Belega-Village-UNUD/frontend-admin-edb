@@ -1,5 +1,6 @@
 "use client";
 
+import ImageSlider from "@/components/ImageSlider";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -13,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { usePersistedAdmin } from "@/zustand/admins";
 import { Loader2 } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -82,39 +82,42 @@ const LoginList = () => {
     }
   };
 
+  const carouselUrl = ["/images/belega-1.jpeg", "/images/belega-2.jpg", "/images/belega-3.jpeg", "/images/belega-4.jpg"];
+
   return (
-    <div className="w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]">
-      <div className="flex items-center justify-center">
-        <div className="mx-auto grid w-[400px] gap-6">
-          <div className="p-5 bg-white shadow-sm ring-1 ring-gray-900/5 md:rounded-lg">
-            <div className="grid gap-2 text-center">
-              <h1 className="text-3xl font-bold pb-1">Login Admin</h1>
-              <p className="pb-4 text-balance text-muted-foreground text-sm opacity-75">
-                Enter admin email below to login dashboard admin
+    <div className="w-full lg:grid lg:max-h-screen lg:grid-cols-2 max-h-screen overflow-x-hidden overflow-y-hidden">
+      <div className="flex items-center justify-center p-8">
+        <div className="mx-auto grid w-[400px] gap-6 bg-white shadow-lg rounded-lg">
+          <div className="p-6 bg-white shadow-md ring-1 ring-gray-900/5 rounded-lg">
+            <div className="grid gap-3 text-center">
+              <h1 className="text-4xl font-extrabold text-gray-800 pb-2">Admin Login</h1>
+              <p className="pb-5 text-lg text-gray-600">
+                Enter your admin credentials to access the dashboard
               </p>
             </div>
-            <div className="grid gap-4">
+            <div className="grid gap-5">
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6"
+                  className="space-y-7"
                 >
                   <FormField
                     control={form.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel htmlFor="email">Email</FormLabel>
+                        <FormLabel htmlFor="email" className="text-lg font-medium">Email</FormLabel>
                         <FormControl>
                           <Input
                             id="email"
                             {...field}
                             type="email"
                             placeholder="john@mail.com"
+                            className="border-2 border-gray-300 rounded-md p-2"
                             required
                           />
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-sm text-gray-500">
                           We`ll never share your email.
                         </FormDescription>
                         <FormMessage />
@@ -126,17 +129,18 @@ const LoginList = () => {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel htmlFor="password">Password</FormLabel>
+                        <FormLabel htmlFor="password" className="text-lg font-medium">Password</FormLabel>
                         <FormControl>
                           <Input
                             id="password"
                             {...field}
                             type="password"
-                            placeholder="enter your password"
+                            placeholder="Enter your password"
+                            className="border-2 border-gray-300 rounded-md p-2"
                             required
                           />
                         </FormControl>
-                        <FormDescription>
+                        <FormDescription className="text-sm text-gray-500">
                           Password must be at least 5 characters.
                         </FormDescription>
                         <FormMessage />
@@ -159,14 +163,8 @@ const LoginList = () => {
           </div>
         </div>
       </div>
-      <div className="hidden bg-muted lg:block">
-        <Image
-          src="https://images.pexels.com/photos/4916192/pexels-photo-4916192.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
-          alt="Image"
-          width="1920"
-          height="1080"
-          className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-        />
+      <div className="hidden lg:block h-screen relative">
+        <ImageSlider urls={carouselUrl} />
       </div>
     </div>
   );

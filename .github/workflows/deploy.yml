@@ -58,7 +58,7 @@ jobs:
           ssh_private_key: ${{ secrets.SERVICE_ACCOUNT_SECRET_SSH_KEY }}
           user: ${{ secrets.CE_USER }}
           command: |-
-            if [ -e "$(pwd)/${{ env.REPO }}" ]; then 
+            if [ -e "${{ env.REPO }}" ]; then 
                cd $(pwd)/${{ env.REPO }}
             else 
                git clone git@github.com:{{ github.repository }}.git 
@@ -78,8 +78,7 @@ jobs:
             PORT=${{ env.PORT }}
             PUBLISH_PORT=${{ env.PUBLISH_PORT }}
             EOF
-            echo "${env.REGISTRY_PASSWORD}" | docker login https://registry.belegacommerce.shop -u ${env.REGISTRY_USERNAME} --password-stdin  
-            bash ./shell/build.sh staging ${{ env.COMMIT_SHA }}
+            echo "${env.REGISTRY_PASSWORD}" | docker login https://registry.belegacommerce.shop -u ${env.REGISTRY_USERNAME} --password-stdin
 
       - name: Setup Output
         id: compute-ssh-deploy-output

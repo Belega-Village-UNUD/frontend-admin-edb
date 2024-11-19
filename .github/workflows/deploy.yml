@@ -58,11 +58,7 @@ jobs:
           ssh_private_key: ${{ secrets.SERVICE_ACCOUNT_SECRET_SSH_KEY }}
           user: ${{ secrets.CE_USER }}
           command: |-
-            if [ -e "${{ env.REPO }}" ]; then 
-               cd $(pwd)/${{ env.REPO }}
-            else 
-               git clone git@github.com:{{ github.repository }}.git 
-            fi 
+            cd $(pwd)/${{ env.REPO }}
             git switch staging
             git pull origin staging
             tee .env <<EOF

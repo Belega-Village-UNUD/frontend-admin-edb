@@ -74,7 +74,6 @@ jobs:
             PORT=${{ env.PORT }}
             PUBLISH_PORT=${{ env.PUBLISH_PORT }}
             EOF
-            echo "${env.REGISTRY_PASSWORD}" | docker login https://registry.belegacommerce.shop -u ${env.REGISTRY_USERNAME} --password-stdin
 
       - name: Setup Output
         id: compute-ssh-deploy-output

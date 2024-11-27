@@ -1,14 +1,14 @@
 server {
     listen 80;
     listen [::]:80;
-    server_name coinsbill.${FRONTEND_HOST};
+    server_name ${FRONTEND_HOST};
 
     location ~ /.well-known/acme-challenge/ {
         allow all;
     }
 
     location / {
-        return 301 http://coinsbill.${FRONTEND_HOST}$${esc}request_uri;
+        return 301 http://${FRONTEND_HOST}$${esc}request_uri;
     }
 }
 
@@ -16,7 +16,7 @@ server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
 
-    server_name coinsbill.${FRONTEND_HOST};
+    server_name ${FRONTEND_HOST};
 
     ssl_certificate /run/secrets/fullchain.pem;
     ssl_certificate_key /run/secrets/privkey.pem;

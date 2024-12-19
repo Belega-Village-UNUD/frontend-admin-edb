@@ -81,6 +81,83 @@ jobs:
           echo '${{ steps.compute-ssh-deploy.outputs.stdout }}'
           echo '${{ steps.compute-ssh-deploy.outputs.stderr }}'
 
+  eslint:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+      packages: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ESLint
+        id: install-eslint
+        run: |
+          npm install eslint@8.57.0
+          npm install @microsoft/eslint-formatter-sarif@2.1.7
+
+      - name: Run ESLint
+        id: run-eslint
+        run: npx eslint .
+          --config  eslint.config.mjs
+          --format @microsoft/eslint-formatter-sarif
+          --output-file eslint-result.sarif
+
+      - name: Archive Eslint SAST code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-sast-report
+          path: eslint-result.sarif
+
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        id: upload-eslint-result
+        if: success() || failure()
+        with:
+          sarif_file: eslint-result.sarif
+          wait-for-processing: true
+
+  sast-bearer-cli:
+    needs: eslint
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+      packages: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth-sast-bearer-cli
+        uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA }}
+
+      - name: Run Bearer
+        uses: bearer/bearer-action@v2
+        id: run-bearer-scan
+        with:
+          format: sarif
+          output: ${{ env.REPO }}-${{ env.COMMIT_SHA }}-security.sarif
+
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        id: upload-bearer-result
+        if: success() || failure()
+        with:
+          sarif_file: ${{ env.REPO }}-${{ env.COMMIT_SHA }}-security.sarif
+          wait-for-processing: true
+
   build:
     needs: setup
     runs-on: ubuntu-latest
@@ -122,6 +199,46 @@ jobs:
           echo '${{ steps.compute-ssh-build.outputs.stdout }}'
           echo '${{ steps.compute-ssh-build.outputs.stderr }}'
 
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth-release
+        uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA }}
+
+      - name: SSH to Compute Engine and Release Image
+        id: compute-ssh-release
+        uses: "google-github-actions/ssh-compute@v1"
+        with:
+          instance_name: ${{ env.INSTANCE_NAME }}
+          zone: ${{ env.ZONE }}
+          ssh_private_key: ${{ secrets.SERVICE_ACCOUNT_SECRET_SSH_KEY }}
+          user: ${{ secrets.CE_USER }}
+          command: |-
+            cd $(pwd)/${{ env.REPO }}
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+            docker push ${{  env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.COMMIT_SHA }}
+            docker push ${{  env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+
+      - name: Release Output
+        id: compute-ssh-release-output
+        run: |-
+          echo '${{ steps.compute-ssh-build.outputs.stdout }}'
+          echo '${{ steps.compute-ssh-build.outputs.stderr }}'
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -152,7 +269,7 @@ jobs:
           user: ${{ secrets.CE_USER }}
           command: |-
             cd $(pwd)/${{ env.REPO }}
-            bash ./shell/deploy.sh staging ${{ env.COMMIT_SHA }}
+            bash ./shell/deploy.sh staging ${{ env.COMMIT_SHA }} ${{ env.REGISTRY }} ${{ env.IMAGE_NAME }}
             bash ./shell/proxy.sh
             rm .env
 

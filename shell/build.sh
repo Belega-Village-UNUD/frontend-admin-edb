@@ -12,6 +12,8 @@ fi
 
 BRANCH=$1
 COMMIT_SHA=$2
+REGISTRY=$3
+IMAGE_NAME=$4
 
 echo "Performing build for $BRANCH";
 
@@ -28,6 +30,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+set -x
 
 docker image prune -f;
 
@@ -36,10 +39,7 @@ if [ $? -ne 0 ]; then
 fi
 
 docker build . --file docker/service/Dockerfile \
-  -t registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$COMMIT_SHA \
-  -t registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$BRANCH
+  -t $REGISTRY/$IMAGE_NAME:$COMMIT_SHA \
+  -t $REGISTRY/$IMAGE_NAME:$BRANCH
 
-docker push registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$COMMIT_SHA 
-docker push registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$BRANCH 
-
-echo "Successfully build the image for registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:$COMMIT_SHA"
+echo "Successfully build the image for $REGISTRY/$IMAGE_NAME:$COMMIT_SHA"

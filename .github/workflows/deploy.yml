@@ -3,13 +3,11 @@ name: Deploy
 on:
   push:
     branches: ["staging"]
-    paths:
-      - "src/**"
-      - ".github/workflows/**"
+    paths-ignore: ["staging"]
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: belega-village-unud/frontend-admin-edb
   COMMIT_SHA: ${{ github.sha }}
   REPO: frontend-admin-edb
   INSTANCE_NAME: belega-instance
@@ -50,6 +48,8 @@ jobs:
           NEXT_PUBLIC_HOSTNAME: ${{ secrets.NEXT_PUBLIC_HOSTNAME }}
           PORT: ${{ secrets.PORT }}
           PUBLISH_PORT: ${{ secrets.PUBLISH_PORT }}
+          TOKEN_NAME: ${{ secrets.TOKEN_NAME }}
+          TOKEN_VALUE: ${{ secrets.TOKEN_VALUE }}
           REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         with:
@@ -73,15 +73,18 @@ jobs:
             NEXT_PUBLIC_HOSTNAME=${{ env.NEXT_PUBLIC_HOSTNAME }}
             PORT=${{ env.PORT }}
             PUBLISH_PORT=${{ env.PUBLISH_PORT }}
+            TOKEN_NAME=${{ env.TOKEN_NAME }}
+            TOKEN_VALUE=${{ env.TOKEN_VALUE }}
             EOF
 
       - name: Setup Output
-        id: compute-ssh-deploy-output
+        id: compute-ssh-setup-output
         run: |-
-          echo '${{ steps.compute-ssh-deploy.outputs.stdout }}'
-          echo '${{ steps.compute-ssh-deploy.outputs.stderr }}'
+          echo '${{ steps.compute-ssh-setup.outputs.stdout }}'
+          echo '${{ steps.compute-ssh-setup.outputs.stderr }}'
 
   eslint:
+    needs: setup
     continue-on-error: true
     runs-on: ubuntu-latest
     environment: staging
@@ -165,7 +168,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-      packages: read
+      packages: write
       id-token: write
     steps:
       - name: Checkout repository
@@ -181,6 +184,9 @@ jobs:
       - name: SSH to Compute Engine and Build
         id: compute-ssh-build
         uses: "google-github-actions/ssh-compute@v1"
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         with:
           instance_name: ${{ env.INSTANCE_NAME }}
           zone: ${{ env.ZONE }}
@@ -188,10 +194,9 @@ jobs:
           user: ${{ secrets.CE_USER }}
           command: |-
             cd $(pwd)/${{ env.REPO }}
-            git checkout staging
-            git fetch --dry-run
+            git switch staging
             git pull origin staging
-            bash ./shell/build.sh staging ${{ env.COMMIT_SHA }}
+            bash ./shell/build.sh staging ${{ env.COMMIT_SHA }} ${{ env.REGISTRY }} ${{ env.IMAGE_NAME }}
 
       - name: Build Output
         id: compute-ssh-build-output
@@ -240,7 +245,7 @@ jobs:
           echo '${{ steps.compute-ssh-build.outputs.stderr }}'
 
   deploy:
-    needs: build
+    needs: release
     runs-on: ubuntu-latest
     environment: staging
     permissions:

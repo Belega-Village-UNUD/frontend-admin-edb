@@ -1,7 +1,7 @@
 version: "3.4"
 services:
   app:
-    image: registry.belegacommerce.shop/belega-village-unud/frontend-admin-edb:${COMMIT_SHA}
+    image: ${REGISTRY}/${IMAGE_NAME}:${COMMIT_SHA}
     env_file:
       - ../../.env
     deploy:
